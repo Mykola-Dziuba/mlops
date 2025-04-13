@@ -1,24 +1,17 @@
 # ml/inference.py
-from joblib import load
-import numpy as np
+import joblib
+from sklearn.datasets import load_iris
 
 
-def load_model(path="ml/model.joblib"):
+def load_model(path: str = "ml/model.joblib"):
     # Load model from file
-    return load(path)
+    return joblib.load(path)
 
 
 def predict(model, features: dict) -> str:
-    # Convert dict to numpy array and predict
-    input_array = np.array(
-        [
-            [
-                features["sepal_length"],
-                features["sepal_width"],
-                features["petal_length"],
-                features["petal_width"],
-            ]
-        ]
-    )
-    prediction = model.predict(input_array)
-    return str(prediction[0])
+    # Predict the class index
+    prediction_index = model.predict([list(features.values())])[0]
+
+    # Map index to class name
+    class_names = load_iris().target_names
+    return class_names[prediction_index]
