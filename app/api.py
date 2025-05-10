@@ -1,10 +1,12 @@
 # app/api.py
 from fastapi import FastAPI
-from app.models.iris import PredictRequest, PredictResponse
-from ml.inference import load_model, predict
+from app.models.text import PredictRequest, PredictResponse
+from ml.sentiment_inference import load_inference, predict_sentiment
 
 app = FastAPI()
-model = load_model()  # Load once at startup
+
+# Load the sentiment analysis model once at startup
+sentiment_model = load_inference()
 
 
 @app.get("/")
@@ -19,5 +21,6 @@ def health_check():
 
 @app.post("/predict", response_model=PredictResponse)
 def predict_route(request: PredictRequest):
-    result = predict(model, request.dict())
+    # Run sentiment prediction
+    result = predict_sentiment(sentiment_model, request.text)
     return PredictResponse(prediction=result)

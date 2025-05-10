@@ -1,3 +1,5 @@
+# tests/test_settings.py
+
 import sys
 import os
 
