@@ -1,48 +1,32 @@
-# Stage 1: Build dependencies
-# Use a smaller, lightweight base image (python:3.12-alpine) for reduced image size
-FROM python:3.12-alpine as builder
+# Dockerfile
 
-# Set working directory to /app
+# 1. Use minimal base image with Python 3.12
+FROM python:3.12-slim
+
+# 2. Set working directory
 WORKDIR /app
 
-# Install system dependencies, such as compilers and libraries for building
-RUN apk add --no-cache \
-    curl \
-    make \
-    gcc \
-    g++ \
-    libc6-compat \
-    libffi-dev \
-    && pip install --upgrade pip setuptools
+# 3. Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl libsnappy-dev make gcc g++ libc6-dev libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install and configure 'uv' (Uvicorn), used to run the FastAPI app
+# 4. Install uv and link to PATH
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     ln -s /root/.local/bin/uv /usr/local/bin/uv
 
-# Copy only the dependency files (pyproject.toml, uv.lock) to install dependencies
-COPY pyproject.toml uv.lock ./ 
+# 5. Copy only dependency files
+COPY pyproject.toml uv.lock ./
 
-# Install dependencies using 'uv sync'
+# 6. Sync dependencies from lockfile
+ENV UV_HTTP_TIMEOUT=120
 RUN uv sync
 
-# Stage 2: Runtime image (copy only necessary files)
-# Use the same lightweight base image for runtime
-FROM python:3.12-alpine as runtime
-
-# Set the working directory to /app
-WORKDIR /app
-
-# Copy over the installed dependencies from the builder stage
-COPY --from=builder /root/.local /root/.local
-
-# Copy the application code from the build context
+# 7. Copy application code
 COPY . .
 
-# Install torch manually using the official wheel (for Alpine)
-RUN pip install torch==2.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-
-# Expose port 8000 for the FastAPI application to be accessible
+# 8. Expose port for FastAPI
 EXPOSE 8000
 
-# Set the default command to run the FastAPI app with Uvicorn
+# 9. Run FastAPI app
 CMD ["uv", "run", "uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
